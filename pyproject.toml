@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Data manager for handling influx_si inputs on Workflow4Metabolomics (usegalaxy.org)"
 authors = ["legregam <legregam@insa-toulouse.fr>"]
 readme = "README.md"
-packages = [{include = "src"}]
+packages = [{include = "influx_si_data_manager"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
