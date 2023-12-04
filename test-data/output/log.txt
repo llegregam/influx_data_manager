@@ -1,0 +1,5 @@
+INFO:root.isocor2mtf: IsoCor data path: C:\Users\legregam\PycharmProjects\influx_si_data_manager\test-data\isocor2mtf\Data_example_res.tsv
+ERROR:root: Sample names in miso files and mflux files are not the same:
+mflux names: ['A']
+miso names: ['Sample_1', 'Sample_2', 'Sample_3']
+NoneType: None
