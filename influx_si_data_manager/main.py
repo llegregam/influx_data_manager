@@ -94,12 +94,10 @@ def args_parse():
         help="Output path for log"
     )
 
-
     return parser
 
 
 def process(args):
-
     # initialize root
     if hasattr(args, "log"):
         _init_logger(str(Path(args.log)))
@@ -111,7 +109,7 @@ def process(args):
 
     _logger.info("Run arguments:")
     for key, val in vars(args).items():
-       _logger.info(f"{key} : {val}")
+        _logger.info(f"{key} : {val}")
 
     mflux_dfs = physiofit2mtf(
         physiofit_res=args.physiofit
@@ -151,13 +149,13 @@ def process(args):
                     df.to_csv(nvf_file, index=False, sep="\t")
 
 
-
 def main():
     parser = args_parse()
     args = parser.parse_args()
     # process(args)
     print(parser)
     print(vars(args))
+
 
 if __name__ == "__main__":
     main()
