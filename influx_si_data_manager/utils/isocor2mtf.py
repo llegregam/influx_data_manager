@@ -12,7 +12,7 @@ _logger = logging.getLogger("root.isocor2mtf")
 def isocor2mtf(
         isocor_res: str,
         sd: float = 0.02
-) -> list[tuple[str, pd.DataFrame]]:
+):
     """
     Generate the list of dataframes in .miso format
 
@@ -22,13 +22,20 @@ def isocor2mtf(
     """
 
     # Get data
-    _logger.info(f"IsoCor data path: {isocor_res}")
+    _logger.debug(f"Selected default SD value: {sd}")
+    _logger.info("Reading IsoCor data...")
+    _logger.debug(f"IsoCor data path: {isocor_res}")
     data_path = Path(isocor_res)
     data = pd.read_csv(data_path, sep="\t")
+    _logger.debug(f"IsoCor data:\n{data}")
     # Build dataframes with .miso structure
     useful_cols = ["sample", "metabolite", "isotopologue", "isotopologue_fraction"]
+    _logger.info("Indexing data...")
     data = data[useful_cols]
+    _logger.info("Generating fragments...")
     data = generate_fragments(data)
+    _logger.debug(f"Data after fragment generation:\n{data}")
+    _logger.info("Mapping new column names onto data...")
     column_name_map = {
         "isotopologue": "Isospecies",
         "isotopologue_fraction": "Value"
@@ -43,11 +50,13 @@ def isocor2mtf(
     data["Comment"] = ""
     data["Dataset"] = "MS-1"
     data = data[["sample", "Id", "Comment", "Specie", "Fragment", "Dataset", "Isospecies", "SD", "Time"]]
+    _logger.info("Generating Isospecies...")
     data["Isospecies"] = "M" + data["Isospecies"].astype(str)
     miso_dfs = [
         (exp_name, data[data["sample"] == exp_name].copy())
         for exp_name in sorted(data["sample"].unique())
     ]
+    _logger.debug("List of experiments and associated dataframes:")
     for (exp, df) in miso_dfs:
         _logger.debug(f"Experiment {exp:}\n{df}")
 

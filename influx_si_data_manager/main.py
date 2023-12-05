@@ -10,7 +10,7 @@ from utils.isocor2mtf import isocor2mtf
 from utils.physiofit2mtf import physiofit2mtf
 
 
-def _init_logger(log_path):
+def _init_logger(log_path, debug=False):
     """
     Initialize the root logger
     :return:
@@ -18,16 +18,19 @@ def _init_logger(log_path):
 
     logger = logging.getLogger("root")
     logger.setLevel(logging.DEBUG)
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(logging.DEBUG)
+    # stream_handler = logging.StreamHandler(sys.stdout)
+    # stream_handler.setLevel(logging.DEBUG)
     file_handler = logging.FileHandler(log_path, mode="w")
-    file_handler.setLevel(logging.INFO)
+    if debug:
+        file_handler.setLevel(logging.DEBUG)
+    else:
+        file_handler.setLevel(logging.INFO)
     formatter = logging.Formatter(
         "%(levelname)s:%(name)s: %(message)s"
     )
-    stream_handler.setFormatter(formatter)
+    # stream_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
+    # logger.addHandler(stream_handler)
     logger.addHandler(file_handler)
 
 
@@ -83,15 +86,18 @@ def args_parse():
         help="Path to .opt file containing extra options to pass to influx_si"
     )
 
-    # Give output collection paths
-    parser.add_argument(
-        "-z", "--zip", type="store_true",
-        help="Output path for zip containing all the files for influx launch"
-    )
-
+    # # Give output collection paths
+    # parser.add_argument(
+    #     "-z", "--zip", action='store_true',
+    #     help="Output path for zip containing all the files for influx launch"
+    # )
     parser.add_argument(
         "-l", "--log", type=str,
         help="Output path for log"
+    )
+    parser.add_argument(
+        '-v', '--verbose', action='store_true',
+        help='Activate debug mode'
     )
 
     return parser
@@ -100,17 +106,18 @@ def args_parse():
 def process(args):
     # initialize root
     if hasattr(args, "log"):
-        _init_logger(str(Path(args.log)))
+        _init_logger(str(Path(args.log)), args.verbose)
     else:
-        _init_logger("./log.txt")
+        _init_logger("./log.txt", args.verbose)
 
     # get logger
     _logger = logging.getLogger("root")
 
-    _logger.info("Run arguments:")
+    _logger.debug("Run arguments:")
     for key, val in vars(args).items():
-        _logger.info(f"{key} : {val}")
+        _logger.debug(f"{key} : {val}")
 
+    _logger.info("Generating mflux and miso dataframes...")
     mflux_dfs = physiofit2mtf(
         physiofit_res=args.physiofit
     )
@@ -125,7 +132,7 @@ def process(args):
         msg = (f"Sample names in miso files and mflux files are not the same:\nmflux names: {mflux_names}"
                f"\nmiso names: {miso_names}")
         _logger.error(msg)
-        raise ValueError(msg)
+        #raise ValueError(msg)
 
     _logger.info(f"Experiment Names:\n{mflux_names}")
 
@@ -133,28 +140,37 @@ def process(args):
         "linp",
         "netw",
         "mmet",
-        "constr",
+        "cnstr",
         "tvar",
         "opt"
     ]
     for mflux, miso in zip(mflux_dfs, miso_dfs):
         with zipfile.ZipFile(f"{mflux[0]}.zip", "w", compression=zipfile.ZIP_DEFLATED) as output_zip:
+            _logger.info(f"Building archive for experiment {mflux[0]}")
             with output_zip.open(f"{mflux[0]}.mflux", "w") as mflux_file:
+                _logger.info(f'Adding {mflux[0]}.mflux')
+                _logger.info(f"Data:\n{mflux[1]}")
                 mflux[1].to_csv(mflux_file, index=False, sep="\t")
             with output_zip.open(f"{miso[0]}.miso", "w") as miso_file:
+                _logger.info(f'Adding {miso[0]}.miso')
+                _logger.info(f"Data:\n{miso[1]}")
                 miso[1].to_csv(miso_file, index=False, sep="\t")
             for nvf in non_var_files:
-                df = pd.read_csv(nvf, sep="\t")
+                df = pd.read_csv(vars(args)[nvf], sep="\t")
                 with output_zip.open(f"{mflux[0]}.{nvf}", "w") as nvf_file:
+                    _logger.info(f'Adding {mflux[0]}.{nvf}')
+                    _logger.info(f"Data:\n{df}")
                     df.to_csv(nvf_file, index=False, sep="\t")
+
+    # mydir = Path(".").glob('**/*')
+    # files = [x for x in mydir]
+    # _logger.info(files)
 
 
 def main():
     parser = args_parse()
     args = parser.parse_args()
-    # process(args)
-    print(parser)
-    print(vars(args))
+    process(args)
 
 
 if __name__ == "__main__":
