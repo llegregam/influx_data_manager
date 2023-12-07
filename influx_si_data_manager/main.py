@@ -1,6 +1,5 @@
 import argparse
 import logging
-import sys
 import zipfile
 from pathlib import Path
 
@@ -125,6 +124,7 @@ def process(args):
         isocor_res=args.isocor
     )
 
+    # Check experiment names
     mflux_names = [exp[0] for exp in mflux_dfs]
     miso_names = [exp[0] for exp in miso_dfs]
 
@@ -132,7 +132,7 @@ def process(args):
         msg = (f"Sample names in miso files and mflux files are not the same:\nmflux names: {mflux_names}"
                f"\nmiso names: {miso_names}")
         _logger.error(msg)
-        #raise ValueError(msg)
+        raise ValueError(msg)
 
     _logger.info(f"Experiment Names:\n{mflux_names}")
 
@@ -144,6 +144,8 @@ def process(args):
         "tvar",
         "opt"
     ]
+
+    # Build archive & export for discovery in Galaxy workflow
     for mflux, miso in zip(mflux_dfs, miso_dfs):
         with zipfile.ZipFile(f"{mflux[0]}.zip", "w", compression=zipfile.ZIP_DEFLATED) as output_zip:
             _logger.info(f"Building archive for experiment {mflux[0]}")
