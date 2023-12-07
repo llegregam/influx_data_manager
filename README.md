@@ -1,7 +1,7 @@
 # Influx Data Manager
 
 [![PyPI version](https://badge.fury.io/py/influx-si-data-manager.svg)](https://badge.fury.io/py/influx-si-data-manager)
-![Python Version](https://img.shields.io/python/required-version-toml)(https://raw.githubusercontent.com/llegregam/influx_data_manager/main/pyproject.toml)
+[![Python Version](https://img.shields.io/python/required-version-toml)](https://raw.githubusercontent.com/llegregam/influx_data_manager/main/pyproject.toml)
 
 
 ## What is the Influx Data Manager?
