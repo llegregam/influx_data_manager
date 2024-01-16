@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.isocor2mtf import isocor2mtf
-from utils.physiofit2mtf import physiofit2mtf
+from influx_si_data_manager.utils.isocor2mtf import isocor2mtf
+from influx_si_data_manager.utils.physiofit2mtf import physiofit2mtf
 
 
 def _init_logger(log_path, debug=False):
@@ -136,6 +136,7 @@ def process(args):
 
     _logger.info(f"Experiment Names:\n{mflux_names}")
 
+    # List of files that should be static (non variable)
     non_var_files = [
         "linp",
         "netw",
@@ -145,24 +146,44 @@ def process(args):
         "opt"
     ]
 
+    _logger.info("Building archives...")
     # Build archive & export for discovery in Galaxy workflow
     for mflux, miso in zip(mflux_dfs, miso_dfs):
         with zipfile.ZipFile(f"{mflux[0]}.zip", "w", compression=zipfile.ZIP_DEFLATED) as output_zip:
             _logger.info(f"Building archive for experiment {mflux[0]}")
-            with output_zip.open(f"{mflux[0]}.mflux", "w") as mflux_file:
-                _logger.info(f'Adding {mflux[0]}.mflux')
-                _logger.info(f"Data:\n{mflux[1]}")
-                mflux[1].to_csv(mflux_file, index=False, sep="\t")
+
+            # Handle isocor output (i.e corrected labelling) file:
             with output_zip.open(f"{miso[0]}.miso", "w") as miso_file:
                 _logger.info(f'Adding {miso[0]}.miso')
                 _logger.info(f"Data:\n{miso[1]}")
                 miso[1].to_csv(miso_file, index=False, sep="\t")
+
+            # Handle physiofit output (i.e extracellular fluxes) file:
+            if mflux[0] != 'None':
+                with output_zip.open(f"{mflux[0]}.mflux", "w") as mflux_file:
+                    _logger.info(f'Adding {mflux[0]}.mflux')
+                    _logger.info(f"Data:\n{mflux[1]}")
+                    mflux[1].to_csv(mflux_file, index=False, sep="\t")
+
+            # Handle the other mtf files
             for nvf in non_var_files:
-                df = pd.read_csv(vars(args)[nvf], sep="\t")
-                with output_zip.open(f"{mflux[0]}.{nvf}", "w") as nvf_file:
-                    _logger.info(f'Adding {mflux[0]}.{nvf}')
-                    _logger.info(f"Data:\n{df}")
-                    df.to_csv(nvf_file, index=False, sep="\t")
+                nvf_file_path = vars(args)[nvf]
+                nvf_file_type = type(nvf_file_path)
+                if nvf == 'netw' and nvf_file_path == 'None':
+                    msg = 'Network file containing reaction and carbon transitions (.netw) is mandatory.'
+                    _logger.error(msg)
+                    raise ValueError(msg)
+                _logger.debug(f"nvf file path: {nvf_file_path}")
+                _logger.debug(f'nvf file type: {nvf_file_type}')
+                if nvf_file_path != 'None':
+                    _logger.info(f'Adding {nvf_file_path}.{nvf}')
+                    df = pd.read_csv(nvf_file_path, sep="\t")
+                    with output_zip.open(f"{mflux[0]}.{nvf}", "w") as nvf_file:
+                        _logger.info(f'Adding {mflux[0]}.{nvf}')
+                        _logger.info(f"Data:\n{df}")
+                        df.to_csv(nvf_file, index=False, sep="\t")
+                else:
+                    _logger.info(f'No {nvf} file given')
 
     # mydir = Path(".").glob('**/*')
     # files = [x for x in mydir]
