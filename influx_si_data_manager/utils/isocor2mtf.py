@@ -96,8 +96,3 @@ def generate_fragments(data: pd.DataFrame):
     # Remove metabolite column (metabolite name is now in Specie)
     data = data.drop("metabolite", axis=1)
     return data
-
-if __name__ == "__main__":
-
-    mtf = isocor2mtf(r"C:\Users\legregam\PycharmProjects\influx_data_manager\test-data\isocor2mtf\Data_galaxy_test.tsv")
-    print(mtf)
