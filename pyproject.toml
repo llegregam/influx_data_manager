@@ -22,3 +22,6 @@ flake8 = "^6.0.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+influx_data_manager = 'influx_si_data_manager.__main__:main'
