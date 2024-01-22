@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from influx_si_data_manager.utils.isocor2mtf import isocor2mtf
-from influx_si_data_manager.utils.physiofit2mtf import physiofit2mtf
+from utils.isocor2mtf import isocor2mtf
+from utils.physiofit2mtf import physiofit2mtf
 
 
 def _init_logger(log_path, debug=False):
@@ -137,7 +137,6 @@ def process(args):
     _logger.info(f"Experiment Names:\n{mflux_names}")
 
     # List of files that should be static (non variable)
-    # List of files that should be static (non variable)
     non_var_files = [
         "linp",
         "netw",
@@ -168,23 +167,6 @@ def process(args):
 
             # Handle the other mtf files
             for nvf in non_var_files:
-                nvf_file_path = vars(args)[nvf]
-                nvf_file_type = type(nvf_file_path)
-                if nvf == 'netw' and nvf_file_path == 'None':
-                    msg = 'Network file containing reaction and carbon transitions (.netw) is mandatory.'
-                    _logger.error(msg)
-                    raise ValueError(msg)
-                _logger.debug(f"nvf file path: {nvf_file_path}")
-                _logger.debug(f'nvf file type: {nvf_file_type}')
-                if nvf_file_path != 'None':
-                    _logger.info(f'Adding {nvf_file_path}.{nvf}')
-                    df = pd.read_csv(nvf_file_path, sep="\t")
-                    with output_zip.open(f"{mflux[0]}.{nvf}", "w") as nvf_file:
-                        _logger.info(f'Adding {mflux[0]}.{nvf}')
-                        _logger.info(f"Data:\n{df}")
-                        df.to_csv(nvf_file, index=False, sep="\t")
-                else:
-                    _logger.info(f'No {nvf} file given')
                 nvf_file_path = vars(args)[nvf]
                 nvf_file_type = type(nvf_file_path)
                 if nvf == 'netw' and nvf_file_path == 'None':
