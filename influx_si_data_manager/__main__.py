@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.isocor2mtf import isocor2mtf
-from utils.physiofit2mtf import physiofit2mtf
+from influx_si_data_manager.utils.isocor2mtf import isocor2mtf
+from influx_si_data_manager.utils.physiofit2mtf import physiofit2mtf
 
 
 def _init_logger(log_path, debug=False):
