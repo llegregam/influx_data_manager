@@ -7,9 +7,6 @@ readme = "README.md"
 license = "GNU General Public License (GPL)"
 packages = [{include = "influx_si_data_manager"}]
 
-[tool.poetry.scripts]
-influx_data_manager = "influx_si_data_manager.main:main"
-
 [tool.poetry.dependencies]
 python = "^3.9"
 pandas = "^2.0.1"
