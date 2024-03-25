@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from influx_si_data_manager.utils.isocor2mtf import isocor2mtf
-from influx_si_data_manager.utils.physiofit2mtf import physiofit2mtf
+from utils.isocor2mtf import isocor2mtf
+from utils.physiofit2mtf import physiofit2mtf
 
 
 def _init_logger(log_path, debug=False):
@@ -181,7 +181,7 @@ def process(args):
                     with output_zip.open(f"{mflux[0]}.{nvf}", "w") as nvf_file:
                         _logger.info(f'Adding {mflux[0]}.{nvf}')
                         _logger.info(f"Data:\n{df}")
-                        df.to_csv(nvf_file, index=False, sep="\t")
+                        df.to_csv(nvf_file, sep="\t")
                 else:
                     _logger.info(f'No {nvf} file given')
 
