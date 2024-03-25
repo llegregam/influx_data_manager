@@ -177,7 +177,7 @@ def process(args):
                 _logger.debug(f'nvf file type: {nvf_file_type}')
                 if nvf_file_path != 'None':
                     _logger.info(f'Adding {nvf_file_path}.{nvf}')
-                    df = pd.read_csv(nvf_file_path, sep="\t")
+                    df = pd.read_csv(nvf_file_path, sep="\t", comment="#")
                     with output_zip.open(f"{mflux[0]}.{nvf}", "w") as nvf_file:
                         _logger.info(f'Adding {mflux[0]}.{nvf}')
                         _logger.info(f"Data:\n{df}")
