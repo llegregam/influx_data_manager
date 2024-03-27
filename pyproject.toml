@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "influx-si-data-manager"
-version = "1.0.1"
+version = "1.0.2"
 description = "Data manager for handling influx_si inputs on Workflow4Metabolomics (usegalaxy.org)"
 authors = ["legregam <legregam@insa-toulouse.fr>"]
 readme = "README.md"
