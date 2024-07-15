@@ -49,7 +49,8 @@ def isocor2mtf(
     data["Id"] = ""
     data["Comment"] = ""
     data["Dataset"] = "MS-1"
-    data = data[["sample", "Id", "Comment", "Specie", "Fragment", "Dataset", "Isospecies", "SD", "Time"]]
+    data = data[["sample", "Id", "Comment", "Specie", "Fragment", "Dataset",
+                 "Isospecies", "Value", "SD", "Time"]]
     _logger.info("Generating Isospecies...")
     data["Isospecies"] = "M" + data["Isospecies"].astype(str)
     miso_dfs = [
