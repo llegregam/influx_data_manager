@@ -40,7 +40,7 @@ def args_parse():
     """
 
     parser = argparse.ArgumentParser(
-        "Influx_si data manager: handling data interoperability on Workflow4Metabolomics, see here: "
+        "Influx_si data connector: enabling tool interoperability on Workflow4Metabolomics, see here: "
         "workflow4metabolomics.usegalaxy.org"
     )
 
