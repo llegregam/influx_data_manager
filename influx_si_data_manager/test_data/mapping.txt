@@ -1,0 +1,31 @@
+Connector	From_tool	Column	Replace	By
+influx_si_data_connector	isocor	metabolite	Isocit	Icit
+influx_si_data_connector	isocor	metabolite	Malate	Mal
+influx_si_data_connector	isocor	metabolite	Pent5P	Rib5P
+influx_si_data_connector	isocor	metabolite	Succ	Suc
+influx_si_data_connector	isocor	sample	AA_1_R1.raw	AA_1_R1
+influx_si_data_connector	isocor	sample	AA_1_R2.raw	AA_1_R2
+influx_si_data_connector	isocor	sample	AA_1_R3.raw	AA_1_R3
+influx_si_data_connector	isocor	sample	AA_1bis_R1.raw	AA_1bis_R1
+influx_si_data_connector	isocor	sample	AA_1bis_R2.raw	AA_1bis_R2
+influx_si_data_connector	isocor	sample	AA_1bis_R3.raw	AA_1bis_R3
+influx_si_data_connector	isocor	sample	AA_2_R1.raw	AA_2_R1
+influx_si_data_connector	isocor	sample	AA_2_R2.raw	AA_2_R2
+influx_si_data_connector	isocor	sample	AA_2_R3.raw	AA_2_R3
+influx_si_data_connector	isocor	sample	AA_2bis_R1.raw	AA_2bis_R1
+influx_si_data_connector	isocor	sample	AA_2bis_R2.raw	AA_2bis_R2
+influx_si_data_connector	isocor	sample	AA_2bis_R3.raw	AA_2bis_R3
+influx_si_data_connector	isocor	sample	MC_1_R1.raw	MC_1_R1
+influx_si_data_connector	isocor	sample	MC_1_R2.raw	MC_1_R2
+influx_si_data_connector	isocor	sample	MC_1_R3.raw	MC_1_R3
+influx_si_data_connector	isocor	sample	MC_1bis_R1.raw	MC_1bis_R1
+influx_si_data_connector	isocor	sample	MC_1bis_R2.raw	MC_1bis_R2
+influx_si_data_connector	isocor	sample	MC_1bis_R3.raw	MC_1bis_R3
+influx_si_data_connector	isocor	sample	MC_2_R1.raw	MC_2_R1
+influx_si_data_connector	isocor	sample	MC_2_R2.raw	MC_2_R2
+influx_si_data_connector	isocor	sample	MC_2_R3.raw	MC_2_R3
+influx_si_data_connector	isocor	sample	MC_2bis_R1.raw	MC_2bis_R1
+influx_si_data_connector	isocor	sample	MC_2bis_R2.raw	MC_2bis_R2
+influx_si_data_connector	isocor	sample	MC_2bis_R3.raw	MC_2bis_R3
+influx_si_data_connector	physiofit	parameter name	glucose_q	Glucupt
+influx_si_data_connector	physiofit	parameter name	acetate_q	Aceupt
