@@ -7,6 +7,7 @@ import pandas as pd
 
 from influx_si_data_manager.utils.isocor2mtf import isocor2mtf
 from influx_si_data_manager.utils.physiofit2mtf import physiofit2mtf
+from influx_si_data_manager.utils.map_data import map_data
 
 
 def _init_logger(log_path, debug=False):
@@ -44,6 +45,15 @@ def args_parse():
         "workflow4metabolomics.usegalaxy.org"
     )
 
+    parser.add_argument(
+        "-v", "--version", action="version",
+    )
+    parser.add_argument(
+        "-m", "--mapping", type=str,
+        help="Path to the mapping file"
+    )
+
+    # Get paths to data
     influx_files = parser.add_argument_group(
         "Influx input files",
         "List of all the input files that influx_si can accept. Some are variable and change for each experiment "
@@ -51,7 +61,6 @@ def args_parse():
         "experiments (.netw, .linp, etc). Check out the influx user documentation for more information."
     )
 
-    # Get paths to data
     influx_files.add_argument(
         "-p", "--physiofit", type=str,
         help="Path to physiofit summary output file"
@@ -84,12 +93,6 @@ def args_parse():
         "-op", "--opt", type=str,
         help="Path to .opt file containing extra options to pass to influx_si"
     )
-
-    # # Give output collection paths
-    # parser.add_argument(
-    #     "-z", "--zip", action='store_true',
-    #     help="Output path for zip containing all the files for influx launch"
-    # )
     parser.add_argument(
         "-l", "--log", type=str,
         help="Output path for log"
@@ -103,6 +106,7 @@ def args_parse():
 
 
 def process(args):
+    
     # initialize root
     if hasattr(args, "log"):
         _init_logger(str(Path(args.log)), args.verbose)
@@ -112,16 +116,25 @@ def process(args):
     # get logger
     _logger = logging.getLogger("root")
 
-    _logger.debug("Run arguments:")
+    _logger.debug("Run argumen/s:")
     for key, val in vars(args).items():
         _logger.debug(f"{key} : {val}")
 
+    
     _logger.info("Generating mflux and miso dataframes...")
     mflux_dfs = physiofit2mtf(
-        physiofit_res=args.physiofit
+        physiofit_res=mapp_data(
+            mapping_file=args.mapping, 
+            data=args.physiofit, 
+            from_tool="physiofit") 
+            if args.mapping else args.physiofit # Use mapped data if mapping file detected else original data
     )
     miso_dfs = isocor2mtf(
-        isocor_res=args.isocor
+        isocor_res=mapp_data(
+            mapping_file=args.mapping, 
+            data=args.isocor, 
+            from_tool="isocor") 
+            if args.mapping else args.isocor # Use mapped data if mapping file detected or original data
     )
 
     # Check experiment names
