@@ -45,9 +45,9 @@ def args_parse():
         "workflow4metabolomics.usegalaxy.org"
     )
 
-    parser.add_argument(
-        "-v", "--version", action="version",
-    )
+    # parser.add_argument(
+    #    "-v", "--version", action="version",
+    # )
     parser.add_argument(
         "-m", "--mapping", type=str,
         help="Path to the mapping file"
@@ -116,26 +116,31 @@ def process(args):
     # get logger
     _logger = logging.getLogger("root")
 
-    _logger.debug("Run argumen/s:")
+    _logger.debug("Run arguments:")
     for key, val in vars(args).items():
         _logger.debug(f"{key} : {val}")
 
     
     _logger.info("Generating mflux and miso dataframes...")
-    mflux_dfs = physiofit2mtf(
-        physiofit_res=mapp_data(
-            mapping_file=args.mapping, 
-            data=args.physiofit, 
-            from_tool="physiofit") 
-            if args.mapping else args.physiofit # Use mapped data if mapping file detected else original data
-    )
-    miso_dfs = isocor2mtf(
-        isocor_res=mapp_data(
-            mapping_file=args.mapping, 
-            data=args.isocor, 
-            from_tool="isocor") 
-            if args.mapping else args.isocor # Use mapped data if mapping file detected or original data
-    )
+
+    if hasattr(args, "mapping") and args.mapping is not None:
+        _logger.info(f"Mapping file detected: {args.mapping}")
+        physiofit_data = map_data(
+            mapping_file=args.mapping,
+            data=pd.read_csv(args.physiofit),
+            from_tool="physiofit"
+        )
+        isocor_data = map_data(
+            mapping_file=args.mapping,
+            data=pd.read_csv(args.isocor, sep="\t"),
+            from_tool="isocor"
+        )
+    else:
+        physiofit_data = args.physiofit
+        isocor_data = args.isocor
+
+    mflux_dfs = physiofit2mtf(physiofit_res=physiofit_data)
+    miso_dfs = isocor2mtf(isocor_res=isocor_data)
 
     # Check experiment names
     mflux_names = [exp[0] for exp in mflux_dfs]
@@ -190,11 +195,14 @@ def process(args):
                 _logger.debug(f'nvf file type: {nvf_file_type}')
                 if nvf_file_path != 'None':
                     _logger.info(f'Adding {nvf_file_path}.{nvf}')
-                    df = pd.read_csv(nvf_file_path, sep="\t", comment="#")
+                    if nvf == "linp":
+                        df = pd.read_csv(nvf_file_path, sep="\t", comment="#", dtype={"Isotopomer": str})
+                    else:
+                        df = pd.read_csv(nvf_file_path, sep="\t", comment="#")
                     with output_zip.open(f"{mflux[0]}.{nvf}", "w") as nvf_file:
                         _logger.info(f'Adding {mflux[0]}.{nvf}')
                         _logger.info(f"Data:\n{df}")
-                        df.to_csv(nvf_file, sep="\t")
+                        df.to_csv(nvf_file, index=False, sep="\t")
                 else:
                     _logger.info(f'No {nvf} file given')
 
