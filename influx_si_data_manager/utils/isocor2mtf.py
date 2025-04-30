@@ -66,13 +66,13 @@ def generate_fragments(data: pd.DataFrame):
 
 
 def isocor2mtf(
-        isocor_res: str,
+        isocor_res,
         sd_threshold: float = 0.02
 ):
     """
     Generate the list of dataframes in .miso format
 
-    :param isocor_res: path to isocor results file
+    :param isocor_res: isocor results file (path or dataframe)
     :param sd: measurements standard deviation (defaults to 0.02)
     :return: None
     """
@@ -81,8 +81,11 @@ def isocor2mtf(
     _logger.debug(f"Selected default SD value: {sd_threshold}")
     _logger.info("Reading IsoCor data...")
     _logger.debug(f"IsoCor data path: {isocor_res}")
-    data_path = Path(isocor_res)
-    data = pd.read_csv(data_path, sep="\t")
+    if not isinstance(isocor_res, pd.DataFrame):
+        data_path = Path(isocor_res)
+        data = pd.read_csv(data_path, sep="\t")
+    else:
+        data = isocor_res
     _logger.debug(f"IsoCor data:\n{data}")
 
     # Calculate means and standard deviations within samples
