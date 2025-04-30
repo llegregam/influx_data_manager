@@ -9,19 +9,22 @@ import pandas as pd
 _logger = logging.getLogger("root.physiofit2mtf")
 
 def physiofit2mtf(
-        physiofit_res: str,
+        physiofit_res,
 ):
     """
     Generate dataframes with the .mflux structure (1 dataframe per experiment/mflux file)
 
-    :param physiofit_res: path to physiofit summary file
+    :param physiofit_res: PhysioFit results file (path or dataframe)
     :return: list containing the dfs
     """
 
     # Get data
     _logger.info("Reading PhysioFit data...")
-    data_path = Path(physiofit_res)
-    data = pd.read_csv(data_path, sep=",")
+    if not isinstance(physiofit_res, pd.DataFrame):
+        data_path = Path(physiofit_res)
+        data = pd.read_csv(data_path, sep=",")
+    else:
+        data = physiofit_res
     _logger.debug(f"PhysioFit data before indexing:\n{data}")
     data = data.loc[(~data["parameter name"].str.contains("_M0")) & (~data["parameter name"].str.contains("_0"))]
     _logger.debug(f"PhysioFit data after indexing:\n{data}")
