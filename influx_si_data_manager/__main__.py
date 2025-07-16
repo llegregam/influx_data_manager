@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 from influx_si_data_manager.utils.isocor2mtf import isocor2mtf
-from influx_si_data_manager.utils.physiofit2mtf import physiofit2mtf
+from influx_si_data_manager.utils.physiofit2mtf import physiofit2mtf, normalize_data
 from influx_si_data_manager.utils.map_data import map_data
 
 
@@ -98,6 +98,11 @@ def args_parse():
         help="Output path for log"
     )
     parser.add_argument(
+        '-n', '--normalization', action='store', type=str, default='None',
+        help='Normalize extracellular fluxes by a value in the input extracellular fluxes ' \
+        'dataset (e.g. glc uptake) or by a specific user-defined value'
+    )
+    parser.add_argument(
         '-v', '--verbose', action='store_true',
         help='Activate debug mode'
     )
@@ -123,7 +128,7 @@ def process(args):
     
     _logger.info("Generating mflux and miso dataframes...")
 
-    if hasattr(args, "mapping") and args.mapping is not None:
+    if hasattr(args, "mapping") and args.mapping != "None":
         _logger.info(f"Mapping file detected: {args.mapping}")
         physiofit_data = map_data(
             mapping_file=args.mapping,
@@ -139,7 +144,25 @@ def process(args):
         physiofit_data = args.physiofit
         isocor_data = args.isocor
 
-    mflux_dfs = physiofit2mtf(physiofit_res=physiofit_data)
+        # Get data
+    _logger.info("Reading PhysioFit data...")
+    data_path = Path(args.physiofit)
+    physiofit_data = pd.read_csv(data_path, sep=",")
+
+    if hasattr(args, "normalization"):
+        _logger.info(f"Normalizing extracellular fluxes by {args.normalization}")
+        try:
+            norm_value = float(args.normalization)
+        except ValueError:
+            norm_value = args.normalization
+        physiofit_data = normalize_data(
+            physiofit_data=physiofit_data,
+            norm_value=norm_value
+        )
+        _logger.info(f"Normalized PhysioFit data:\n{physiofit_data}")
+        
+
+    mflux_dfs = physiofit2mtf(data=physiofit_data)
     miso_dfs = isocor2mtf(isocor_res=isocor_data)
 
     # Check experiment names
