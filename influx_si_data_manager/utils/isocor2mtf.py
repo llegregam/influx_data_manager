@@ -9,7 +9,6 @@ import pandas as pd
 _logger = logging.getLogger("root.isocor2mtf")
 
 
-
 def _calculate_means_and_sds(data: pd.DataFrame):
     """
     Calculate means and standard deviations within samples
@@ -18,9 +17,10 @@ def _calculate_means_and_sds(data: pd.DataFrame):
     """
     # Extract base sample name by removing replicate suffix
     data['sample'] = data['sample'].str.replace(r'_R\d+.*', '', regex=True)
-    
+
     # Group by base sample, metabolite, isotopologue
-    grouped = data.groupby(["sample", "metabolite", "isotopologue"])["isotopologue_fraction"]
+    grouped = data.groupby(["sample", "metabolite", "isotopologue"])[
+        "isotopologue_fraction"]
     _logger.debug(f"Grouped data:\n{grouped.head()}")  # Debug print
 
     # Calculate means and standard deviations and return
@@ -41,7 +41,8 @@ def generate_fragments(data: pd.DataFrame):
     df_f = data[data.metabolite.str.contains("__f")].copy()
     df = data[~data.metabolite.str.contains("__f")].copy()
     if not df_f.empty:
-        df_f[["Specie", "Fragment"]] = df_f.metabolite.str.split("__f", expand=True)
+        df_f[["Specie", "Fragment"]] = df_f.metabolite.str.split("__f",
+                                                                 expand=True)
     tmps = []
 
     # Build Fragment and Specie columns
@@ -72,8 +73,8 @@ def isocor2mtf(
     """
     Generate the list of dataframes in .miso format
 
+    :param sd_threshold: default threshold value for SDs
     :param isocor_res: isocor results file (path or dataframe)
-    :param sd: measurements standard deviation (defaults to 0.02)
     :return: None
     """
 
@@ -112,7 +113,7 @@ def isocor2mtf(
     # Change sd value to 0.02 if it is lower
     data["SD"] = data["std"].apply(
         lambda x: x if x > sd_threshold else sd_threshold
-        )
+    )
     data["Time"] = ""
     data["Id"] = ""
     data["Comment"] = ""
@@ -121,21 +122,23 @@ def isocor2mtf(
                  "Isospecies", "Value", "SD", "Time"]]
     _logger.info("Generating Isospecies...")
     data["Isospecies"] = "M" + data["Isospecies"].astype(str)
-    miso_dfs = [
+    miso_dataframes = [
         (exp_name, data[data["sample"] == exp_name].copy())
         for exp_name in sorted(data["sample"].unique())
     ]
     _logger.debug("List of experiments and associated dataframes:")
-    for (exp, df) in miso_dfs:
+    for (exp, df) in miso_dataframes:
         _logger.debug(f"Experiment {exp:}\n{df}")
 
-    return miso_dfs
+    return miso_dataframes
 
 
 if __name__ == "__main__":
-    
     import logging
+
     logging.basicConfig(level=logging.DEBUG)
-    path_to_test_data = "/home/llegregam/Documents/tools_w4m/packages/influx_data_manager/influx_si_data_manager/test_data/isocor_results.tabular"
+    path_to_test_data = ("/home/llegregam/Documents/tools_w4m/packages"
+                         "/influx_data_manager/influx_si_data_manager"
+                         "/test_data/isocor_results.tabular")
     miso_dfs = isocor2mtf(path_to_test_data)
     print(miso_dfs)
