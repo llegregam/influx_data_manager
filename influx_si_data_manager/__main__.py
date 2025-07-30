@@ -149,8 +149,8 @@ def process(args):
     data_path = Path(args.physiofit)
     physiofit_data = pd.read_csv(data_path, sep=",")
 
-    if hasattr(args, "normalization"):
-        _logger.info(f"Normalizing extracellular fluxes by {args.normalization}")
+    if args.normalization == 'true':
+        _logger.info(f"Normalization of extracellular fluxes by {args.normalization}")
         try:
             norm_value = float(args.normalization)
         except ValueError:
