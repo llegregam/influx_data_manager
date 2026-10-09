@@ -32,14 +32,3 @@ def map_data(mapping_file, data, from_tool):
         logger.debug(f"Column values after replacement: {data[column]}")
     
     return data
-            
-            
-
-if __name__ == "__main__":
-    
-    #isocor_data = pd.read_csv("../test_data/isocor_results.tabular", sep="\t")
-    #print(isocor_data)
-    physiofit_data = pd.read_csv(r"/home/llegregam/Documents/tools_w4m/packages/influx_data_manager/influx_si_data_manager/test_data/summary.csv", sep=",")
-    print(physiofit_data)
-    replaced = map_data(r"/home/llegregam/Documents/tools_w4m/packages/influx_data_manager/influx_si_data_manager/test_data/mapping.txt", data=physiofit_data, from_tool="physiofit")
-    print(replaced)
