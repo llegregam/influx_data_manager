@@ -110,13 +110,29 @@ def args_parse():
     return parser
 
 
+def _is_given(value):
+    """
+    Check if an optional input was given. Galaxy passes the string 'None' for
+    optional inputs left empty, the CLI passes None.
+    """
+    return value not in (None, "None", "")
+
+
+def _parse_normalization(value):
+    """
+    Normalization is either a number or the name of a PhysioFit parameter
+    """
+    try:
+        return float(value)
+    except ValueError:
+        return value
+
+
 def process(args):
-    
+
     # initialize root
-    if hasattr(args, "log"):
-        _init_logger(str(Path(args.log)), args.verbose)
-    else:
-        _init_logger("./log.txt", args.verbose)
+    log_path = args.log if _is_given(args.log) else "./log.txt"
+    _init_logger(str(Path(log_path)), args.verbose)
 
     # get logger
     _logger = logging.getLogger("root")
@@ -125,57 +141,63 @@ def process(args):
     for key, val in vars(args).items():
         _logger.debug(f"{key} : {val}")
 
-    
+    if not _is_given(args.netw):
+        msg = 'Network file containing reaction and carbon transitions (.netw) is mandatory.'
+        _logger.error(msg)
+        raise ValueError(msg)
+
     _logger.info("Generating mflux and miso dataframes...")
 
-    if hasattr(args, "mapping") and args.mapping != "None":
+    isocor_data = pd.read_csv(args.isocor, sep="\t")
+    physiofit_data = None
+    if _is_given(args.physiofit):
+        _logger.info("Reading PhysioFit data...")
+        physiofit_data = pd.read_csv(args.physiofit, sep=",")
+    else:
+        _logger.info("No PhysioFit data given, archives will not contain .mflux files")
+
+    if _is_given(args.mapping):
         _logger.info(f"Mapping file detected: {args.mapping}")
-        physiofit_data = map_data(
-            mapping_file=args.mapping,
-            data=pd.read_csv(args.physiofit),
-            from_tool="physiofit"
-        )
         isocor_data = map_data(
             mapping_file=args.mapping,
-            data=pd.read_csv(args.isocor, sep="\t"),
+            data=isocor_data,
             from_tool="isocor"
         )
-    else:
-        physiofit_data = args.physiofit
-        isocor_data = args.isocor
+        if physiofit_data is not None:
+            physiofit_data = map_data(
+                mapping_file=args.mapping,
+                data=physiofit_data,
+                from_tool="physiofit"
+            )
 
-        # Get data
-    _logger.info("Reading PhysioFit data...")
-    data_path = Path(args.physiofit)
-    physiofit_data = pd.read_csv(data_path, sep=",")
-
-    if args.normalization == 'true':
-        _logger.info(f"Normalization of extracellular fluxes by {args.normalization}")
-        try:
-            norm_value = float(args.normalization)
-        except ValueError:
-            norm_value = args.normalization
+    if _is_given(args.normalization):
+        if physiofit_data is None:
+            msg = "Normalization of extracellular fluxes requires PhysioFit data"
+            _logger.error(msg)
+            raise ValueError(msg)
+        norm_value = _parse_normalization(args.normalization)
+        _logger.info(f"Normalization of extracellular fluxes by {norm_value}")
         physiofit_data = normalize_data(
             physiofit_data=physiofit_data,
             norm_value=norm_value
         )
         _logger.info(f"Normalized PhysioFit data:\n{physiofit_data}")
-        
 
-    mflux_dfs = physiofit2mtf(data=physiofit_data)
     miso_dfs = isocor2mtf(isocor_res=isocor_data)
-
-    # Check experiment names
-    mflux_names = [exp[0] for exp in mflux_dfs]
     miso_names = [exp[0] for exp in miso_dfs]
 
-    if mflux_names != miso_names:
-        msg = (f"Sample names in miso files and mflux files are not the same:\nmflux names: {mflux_names}"
-               f"\nmiso names: {miso_names}")
-        _logger.error(msg)
-        raise ValueError(msg)
+    mflux_by_experiment = {}
+    if physiofit_data is not None:
+        mflux_dfs = physiofit2mtf(data=physiofit_data)
+        mflux_names = [exp[0] for exp in mflux_dfs]
+        if mflux_names != miso_names:
+            msg = (f"Sample names in miso files and mflux files are not the same:\nmflux names: {mflux_names}"
+                   f"\nmiso names: {miso_names}")
+            _logger.error(msg)
+            raise ValueError(msg)
+        mflux_by_experiment = dict(mflux_dfs)
 
-    _logger.info(f"Experiment Names:\n{mflux_names}")
+    _logger.info(f"Experiment Names:\n{miso_names}")
 
     # List of files that should be static (non variable)
     non_var_files = [
@@ -189,49 +211,39 @@ def process(args):
 
     _logger.info("Building archives...")
     # Build archive & export for discovery in Galaxy workflow
-    for mflux, miso in zip(mflux_dfs, miso_dfs):
-        with zipfile.ZipFile(f"{mflux[0]}.zip", "w", compression=zipfile.ZIP_DEFLATED) as output_zip:
-            _logger.info(f"Building archive for experiment {mflux[0]}")
+    for experiment, miso in miso_dfs:
+        with zipfile.ZipFile(f"{experiment}.zip", "w", compression=zipfile.ZIP_DEFLATED) as output_zip:
+            _logger.info(f"Building archive for experiment {experiment}")
 
             # Handle isocor output (i.e corrected labelling) file:
-            with output_zip.open(f"{miso[0]}.miso", "w") as miso_file:
-                _logger.info(f'Adding {miso[0]}.miso')
-                _logger.info(f"Data:\n{miso[1]}")
-                miso[1].to_csv(miso_file, index=False, sep="\t")
+            with output_zip.open(f"{experiment}.miso", "w") as miso_file:
+                _logger.info(f'Adding {experiment}.miso')
+                _logger.info(f"Data:\n{miso}")
+                miso.to_csv(miso_file, index=False, sep="\t")
 
             # Handle physiofit output (i.e extracellular fluxes) file:
-            if mflux[0] != 'None':
-                with output_zip.open(f"{mflux[0]}.mflux", "w") as mflux_file:
-                    _logger.info(f'Adding {mflux[0]}.mflux')
-                    _logger.info(f"Data:\n{mflux[1]}")
-                    mflux[1].to_csv(mflux_file, index=False, sep="\t")
+            if experiment in mflux_by_experiment:
+                mflux = mflux_by_experiment[experiment]
+                with output_zip.open(f"{experiment}.mflux", "w") as mflux_file:
+                    _logger.info(f'Adding {experiment}.mflux')
+                    _logger.info(f"Data:\n{mflux}")
+                    mflux.to_csv(mflux_file, index=False, sep="\t")
 
             # Handle the other mtf files
             for nvf in non_var_files:
                 nvf_file_path = vars(args)[nvf]
-                nvf_file_type = type(nvf_file_path)
-                if nvf == 'netw' and nvf_file_path == 'None':
-                    msg = 'Network file containing reaction and carbon transitions (.netw) is mandatory.'
-                    _logger.error(msg)
-                    raise ValueError(msg)
                 _logger.debug(f"nvf file path: {nvf_file_path}")
-                _logger.debug(f'nvf file type: {nvf_file_type}')
-                if nvf_file_path != 'None':
-                    _logger.info(f'Adding {nvf_file_path}.{nvf}')
-                    if nvf == "linp":
-                        df = pd.read_csv(nvf_file_path, sep="\t", comment="#", dtype={"Isotopomer": str})
-                    else:
-                        df = pd.read_csv(nvf_file_path, sep="\t", comment="#")
-                    with output_zip.open(f"{mflux[0]}.{nvf}", "w") as nvf_file:
-                        _logger.info(f'Adding {mflux[0]}.{nvf}')
-                        _logger.info(f"Data:\n{df}")
-                        df.to_csv(nvf_file, index=False, sep="\t")
-                else:
+                if not _is_given(nvf_file_path):
                     _logger.info(f'No {nvf} file given')
-
-    # mydir = Path(".").glob('**/*')
-    # files = [x for x in mydir]
-    # _logger.info(files)
+                    continue
+                if nvf == "linp":
+                    df = pd.read_csv(nvf_file_path, sep="\t", comment="#", dtype={"Isotopomer": str})
+                else:
+                    df = pd.read_csv(nvf_file_path, sep="\t", comment="#")
+                with output_zip.open(f"{experiment}.{nvf}", "w") as nvf_file:
+                    _logger.info(f'Adding {experiment}.{nvf}')
+                    _logger.info(f"Data:\n{df}")
+                    df.to_csv(nvf_file, index=False, sep="\t")
 
 
 def main():
