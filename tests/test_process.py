@@ -68,22 +68,34 @@ def test_normalization_by_value(tmp_path, monkeypatch, physiofit_file):
     assert mflux_values(tmp_path)["Aceupt"] == pytest.approx(-0.7078295328322147 / 2)
 
 
-def test_normalization_requires_physiofit_data(tmp_path, monkeypatch):
+@pytest.mark.parametrize("extra_args", [[], ["--physiofit", "None"], ["--normalization", "2"]])
+def test_physiofit_data_is_mandatory(tmp_path, monkeypatch, extra_args):
+    # influx_si cannot run without measured fluxes (.mflux)
     with pytest.raises(ValueError, match="PhysioFit"):
-        run(tmp_path, monkeypatch, "--normalization", "2")
+        run(tmp_path, monkeypatch, *extra_args)
+    assert not list(tmp_path.glob("*.zip"))
 
 
-def test_physiofit_data_is_optional(tmp_path, monkeypatch):
-    run(tmp_path, monkeypatch)
-    with zipfile.ZipFile(tmp_path / "AA_2.zip") as zf:
-        members = zf.namelist()
-    assert "AA_2.miso" in members
-    assert "AA_2.netw" in members
-    assert not any(member.endswith(".mflux") for member in members)
+def test_hand_made_physiofit_summary_is_accepted(tmp_path, monkeypatch):
+    """Fluxes produced outside PhysioFit can be given in the PhysioFit summary format"""
+    summary = tmp_path / "fluxes.csv"
+    summary.write_text(
+        "experiments,parameter name,optimal,sd\n"
+        "AA_2,growth_rate,0.5,0.02\nAA_2,Glc_q,-6.4,1.0\n"
+        "MC_2,growth_rate,0.5,0.02\nMC_2,Glc_q,-6.1,1.0\n"
+    )
+    run(tmp_path, monkeypatch, "--physiofit", str(summary))
+    assert read_member(tmp_path / "AA_2.zip", "AA_2.mflux")["Flux"].tolist() == ["growth_rate", "Glc_q"]
 
 
-def test_log_defaults_to_working_directory(tmp_path, monkeypatch):
-    run(tmp_path, monkeypatch)
+def test_mflux_file_is_rejected_with_a_clear_message(tmp_path, monkeypatch):
+    # An .mflux file is not the PhysioFit summary format this input expects
+    with pytest.raises(ValueError, match="PhysioFit summary"):
+        run(tmp_path, monkeypatch, "--physiofit", str(MTF_DATA / "e_coli.mflux"))
+
+
+def test_log_defaults_to_working_directory(tmp_path, monkeypatch, physiofit_file):
+    run(tmp_path, monkeypatch, "--physiofit", str(physiofit_file), "--mapping", str(MAPPING))
     assert (tmp_path / "log.txt").is_file()
 
 

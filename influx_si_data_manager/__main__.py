@@ -63,7 +63,8 @@ def args_parse():
 
     influx_files.add_argument(
         "-p", "--physiofit", type=str,
-        help="Path to physiofit summary output file"
+        help="Path to the PhysioFit summary file (mandatory). Fluxes computed outside PhysioFit "
+             "can be given in the same format (columns: experiments, parameter name, optimal, sd)"
     )
     influx_files.add_argument(
         "-i", "--isocor", type=str,
@@ -110,6 +111,10 @@ def args_parse():
     return parser
 
 
+# Columns of the PhysioFit summary that are used to build the .mflux files
+PHYSIOFIT_COLUMNS = ["experiments", "parameter name", "optimal", "sd"]
+
+
 def _is_given(value):
     """
     Check if an optional input was given. Galaxy passes the string 'None' for
@@ -146,15 +151,25 @@ def process(args):
         _logger.error(msg)
         raise ValueError(msg)
 
+    # influx_si cannot run without measured fluxes (.mflux)
+    if not _is_given(args.physiofit):
+        msg = ('PhysioFit results are mandatory: they provide the measured fluxes (.mflux) '
+               'that influx_si needs. Fluxes computed outside PhysioFit can be given in the '
+               'PhysioFit summary format.')
+        _logger.error(msg)
+        raise ValueError(msg)
+
     _logger.info("Generating mflux and miso dataframes...")
 
     isocor_data = pd.read_csv(args.isocor, sep="\t")
-    physiofit_data = None
-    if _is_given(args.physiofit):
-        _logger.info("Reading PhysioFit data...")
-        physiofit_data = pd.read_csv(args.physiofit, sep=",")
-    else:
-        _logger.info("No PhysioFit data given, archives will not contain .mflux files")
+    _logger.info("Reading PhysioFit data...")
+    physiofit_data = pd.read_csv(args.physiofit, sep=",")
+    missing_columns = [col for col in PHYSIOFIT_COLUMNS if col not in physiofit_data.columns]
+    if missing_columns:
+        msg = (f"The PhysioFit file is not in the PhysioFit summary format (comma-separated, "
+               f"with the columns {', '.join(PHYSIOFIT_COLUMNS)}). Missing columns: {', '.join(missing_columns)}")
+        _logger.error(msg)
+        raise ValueError(msg)
 
     if _is_given(args.mapping):
         _logger.info(f"Mapping file detected: {args.mapping}")
@@ -163,18 +178,13 @@ def process(args):
             data=isocor_data,
             from_tool="isocor"
         )
-        if physiofit_data is not None:
-            physiofit_data = map_data(
-                mapping_file=args.mapping,
-                data=physiofit_data,
-                from_tool="physiofit"
-            )
+        physiofit_data = map_data(
+            mapping_file=args.mapping,
+            data=physiofit_data,
+            from_tool="physiofit"
+        )
 
     if _is_given(args.normalization):
-        if physiofit_data is None:
-            msg = "Normalization of extracellular fluxes requires PhysioFit data"
-            _logger.error(msg)
-            raise ValueError(msg)
         norm_value = _parse_normalization(args.normalization)
         _logger.info(f"Normalization of extracellular fluxes by {norm_value}")
         physiofit_data = normalize_data(
@@ -186,16 +196,14 @@ def process(args):
     miso_dfs = isocor2mtf(isocor_res=isocor_data)
     miso_names = [exp[0] for exp in miso_dfs]
 
-    mflux_by_experiment = {}
-    if physiofit_data is not None:
-        mflux_dfs = physiofit2mtf(data=physiofit_data)
-        mflux_names = [exp[0] for exp in mflux_dfs]
-        if mflux_names != miso_names:
-            msg = (f"Sample names in miso files and mflux files are not the same:\nmflux names: {mflux_names}"
-                   f"\nmiso names: {miso_names}")
-            _logger.error(msg)
-            raise ValueError(msg)
-        mflux_by_experiment = dict(mflux_dfs)
+    mflux_dfs = physiofit2mtf(data=physiofit_data)
+    mflux_names = [exp[0] for exp in mflux_dfs]
+    if mflux_names != miso_names:
+        msg = (f"Sample names in miso files and mflux files are not the same:\nmflux names: {mflux_names}"
+               f"\nmiso names: {miso_names}")
+        _logger.error(msg)
+        raise ValueError(msg)
+    mflux_by_experiment = dict(mflux_dfs)
 
     _logger.info(f"Experiment Names:\n{miso_names}")
 
@@ -222,12 +230,11 @@ def process(args):
                 miso.to_csv(miso_file, index=False, sep="\t")
 
             # Handle physiofit output (i.e extracellular fluxes) file:
-            if experiment in mflux_by_experiment:
-                mflux = mflux_by_experiment[experiment]
-                with output_zip.open(f"{experiment}.mflux", "w") as mflux_file:
-                    _logger.info(f'Adding {experiment}.mflux')
-                    _logger.info(f"Data:\n{mflux}")
-                    mflux.to_csv(mflux_file, index=False, sep="\t")
+            mflux = mflux_by_experiment[experiment]
+            with output_zip.open(f"{experiment}.mflux", "w") as mflux_file:
+                _logger.info(f'Adding {experiment}.mflux')
+                _logger.info(f"Data:\n{mflux}")
+                mflux.to_csv(mflux_file, index=False, sep="\t")
 
             # Handle the other mtf files
             for nvf in non_var_files:
